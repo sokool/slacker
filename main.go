@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
-
 	"fmt"
+	"log"
 
 	"os"
 
+	"github.com/sokool/slacker/replacer"
 	"github.com/sokool/slacker/server"
 )
 
@@ -14,7 +14,7 @@ func main() {
 
 	server.Token = osVar("BOT_TOKEN", "")
 	server.Address = osVar("BOT_ADDR", "localhost:1234")
-	server.Register(Welcome)
+	server.Register(replacer.OutWebHook)
 
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
