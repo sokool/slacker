@@ -52,8 +52,68 @@ func init() {
 
 }
 
-func (s *defaultServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func isValid(m Message) (bool, []error) {
+	var ec []error
 
+	if m.Token != token {
+		ec = append(ec, fmt.Errorf("Wrong token"))
+	}
+
+	return len(ec) == 0, ec
+
+}
+
+// Read environment variable, if empty return def
+func osEnvDefault(name, def string) (string, bool) {
+	ev := os.Getenv(name)
+	if ev == "" {
+		return def, false
+	}
+	return ev, true
+}
+
+//
+func create(r io.Reader) (Message, error) {
+	var m Message
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return m, err
+	}
+
+	re := regexp.MustCompile(`\r?\n`)
+	input := re.ReplaceAllString(string(b), "")
+
+	q, err := url.ParseQuery(input)
+	if err != nil {
+		return m, err
+	}
+
+	m = Message{
+		Token:       q.Get("token"),
+		TeamID:      q.Get("team_id"),
+		TeamDomain:  q.Get("team_domain"),
+		ChannelID:   q.Get("channel_id"),
+		ChannelName: q.Get("channel_name"),
+		Timestamp:   q.Get("timestamp"),
+		UserID:      q.Get("user_id"),
+		UserName:    q.Get("user_name"),
+		Text:        q.Get("text"),
+		TriggerWord: q.Get("trigger_word"),
+	}
+
+	return m, nil
+}
+
+func Register(h WebHook) {
+	server.hook = h
+
+}
+
+func Run() error {
+	return http.ListenAndServe(address, server)
+}
+
+func (s *defaultServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// message is created based on request body
 	m, err := create(r.Body)
 	if err != nil {
@@ -91,64 +151,4 @@ func (s *defaultServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-}
-
-func Register(h WebHook) {
-	server.hook = h
-
-}
-
-func Run() error {
-	return http.ListenAndServe(address, server)
-}
-
-func isValid(m Message) (bool, []error) {
-	var ec []error
-
-	if m.Token != token {
-		ec = append(ec, fmt.Errorf("Wrong token"))
-	}
-
-	return len(ec) == 0, ec
-
-}
-
-// Read environment variable, if empty return def
-func osEnvDefault(name, def string) (string, bool) {
-	ev := os.Getenv(name)
-	if ev == "" {
-		return def, false
-	}
-	return ev, true
-}
-
-func create(r io.Reader) (Message, error) {
-	var m Message
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return m, err
-	}
-
-	re := regexp.MustCompile(`\r?\n`)
-	input := re.ReplaceAllString(string(b), "")
-
-	q, err := url.ParseQuery(input)
-	if err != nil {
-		return m, err
-	}
-
-	m = Message{
-		Token:       q.Get("token"),
-		TeamID:      q.Get("team_id"),
-		TeamDomain:  q.Get("team_domain"),
-		ChannelID:   q.Get("channel_id"),
-		ChannelName: q.Get("channel_name"),
-		Timestamp:   q.Get("timestamp"),
-		UserID:      q.Get("user_id"),
-		UserName:    q.Get("user_name"),
-		Text:        q.Get("text"),
-		TriggerWord: q.Get("trigger_word"),
-	}
-
-	return m, nil
 }
