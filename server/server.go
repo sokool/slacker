@@ -13,8 +13,7 @@ import (
 	"regexp"
 
 	"encoding/json"
-
-	"github.com/iris-contrib/errors"
+	"errors"
 )
 
 var (
