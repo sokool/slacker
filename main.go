@@ -22,7 +22,7 @@ func main() {
 }
 
 func Welcome(m server.Message) (string, error) {
-	return fmt.Sprintf("Eloszki, %s !", m.UserName), nil
+	return fmt.Sprintf("Eloszki, %s\nYour text is: %s\n !", m.UserName, m.Text), nil
 }
 
 // Read environment variable, if empty return default
