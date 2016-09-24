@@ -12,8 +12,8 @@ import (
 
 func main() {
 
-	//server.Token = osEnvDefault("BOT_TOKEN", "")
-	server.Address = osEnvDefault("BOT_ADDRESS", "localhost:1234")
+	server.Token = osEnvDefault("BOT_TOKEN", "")
+	server.Address = osEnvDefault("BOT_ADDR", "localhost:1234")
 
 	server.Register(Welcome)
 
