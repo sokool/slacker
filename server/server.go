@@ -97,7 +97,7 @@ func Register(h WebHook) {
 func Run() error {
 
 	log.Printf("Running server on %s\n", Address)
-	log.Printf("Listen for slack messages with %s token\n", Token)
+	log.Printf("Listen for slack messages with token: \"%s\" \n", Token)
 
 	return http.ListenAndServe(Address, srv)
 }
