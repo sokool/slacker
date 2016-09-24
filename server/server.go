@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"os"
 
 	"io"
 
@@ -14,12 +13,13 @@ import (
 	"regexp"
 
 	"encoding/json"
-	"fmt"
+
+	"github.com/iris-contrib/errors"
 )
 
 var (
-	address string
-	token   string
+	Address string = "localhost:1234"
+	Token   string = ""
 	srv     *server
 )
 
@@ -42,35 +42,21 @@ type (
 	response map[string]interface{}
 
 	server struct {
-		hooks map[string]WebHook
-		hook  WebHook
+		hook WebHook
 	}
 )
 
 func init() {
-	address, _ = osEnvDefault("BOT_ADDR", "localhost:1234")
-	token, _ = osEnvDefault("BOT_TOKEN", "HA1.54")
 	srv = &server{}
 }
 
 func isValid(m Message) (bool, []error) {
 	var ec []error
-
-	if m.Token != token {
-		ec = append(ec, fmt.Errorf("Wrong token"))
+	if Token != "" && m.Token != Token {
+		ec = append(ec, errors.New("Given token is not valid"))
 	}
 
 	return len(ec) == 0, ec
-
-}
-
-// Read environment variable, if empty return def
-func osEnvDefault(name, def string) (string, bool) {
-	ev := os.Getenv(name)
-	if ev == "" {
-		return def, false
-	}
-	return ev, true
 }
 
 //
@@ -107,11 +93,11 @@ func create(r io.Reader) (Message, error) {
 
 func Register(h WebHook) {
 	srv.hook = h
-
 }
 
 func Run() error {
-	return http.ListenAndServe(address, srv)
+
+	return http.ListenAndServe(Address, srv)
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
