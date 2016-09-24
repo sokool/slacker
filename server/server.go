@@ -14,6 +14,7 @@ import (
 	"regexp"
 
 	"encoding/json"
+	"fmt"
 )
 
 var (
@@ -28,7 +29,7 @@ type (
 		hook  WebHook
 	}
 
-	WebHook func(Message) interface{}
+	WebHook func(Message) (interface{}, error)
 
 	Message struct {
 		Token       string `json:"token"`
@@ -47,28 +48,48 @@ type (
 func init() {
 	address, _ = osEnvDefault("BOT_ADDR", "localhost:1234")
 	token, _ = osEnvDefault("BOT_TOKEN", "HA1.54")
-	server = &defaultServer{
-	//hooks: map[string]WebHook{},
-	}
+	server = &defaultServer{}
 
 }
 
 func (s *defaultServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	m, err := parse(r.Body)
+	// message is created based on request body
+	m, err := create(r.Body)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Error occoured when message was created: %s", err.Error())
+		return
+	}
+
+	// Validates create message, check if all data are as server expects
+	if ok, errs := isValid(m); !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Printf("Message is not valid due %s\n", errs)
+
+		return
+	}
+
+	// Check if there is any webhook agregated in server
+	if s.hook == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("No web hock attached")
+		return
+	}
+
+	// Call attached web hook and check if there is an error due message processing
+	re, err := s.hook(m)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err.Error())
+
 		return
 	}
 
-	if !isTokenValid(m) {
-		log.Printf("Wrong token %s\n", m.Token)
-		return
+	// Send response to the caller
+	if err := json.NewEncoder(w).Encode(re); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 	}
-
-	re := s.hook(m)
-	// Send personalised response
-	json.NewEncoder(w).Encode(re)
 
 }
 
@@ -81,8 +102,15 @@ func Run() error {
 	return http.ListenAndServe(address, server)
 }
 
-func isTokenValid(m Message) bool {
-	return m.Token == token
+func isValid(m Message) (bool, []error) {
+	var ec []error
+
+	if m.Token != token {
+		ec = append(ec, fmt.Errorf("Wrong token"))
+	}
+
+	return len(ec) == 0, ec
+
 }
 
 // Read environment variable, if empty return def
@@ -94,7 +122,7 @@ func osEnvDefault(name, def string) (string, bool) {
 	return ev, true
 }
 
-func parse(r io.Reader) (Message, error) {
+func create(r io.Reader) (Message, error) {
 	var m Message
 	b, err := ioutil.ReadAll(r)
 	if err != nil {

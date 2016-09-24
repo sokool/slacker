@@ -13,15 +13,13 @@ type WelcomeResponse struct {
 }
 
 func main() {
-
-	server.Register(Welcome)
-
+	server.Register(welcome)
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
 	}
 
 }
 
-func Welcome(m server.Message) interface{} {
-	return WelcomeResponse{fmt.Sprintf("Eloszki, %s !", m.UserName)}
+func welcome(m server.Message) (interface{}, error) {
+	return WelcomeResponse{fmt.Sprintf("Eloszki, %s !", m.UserName)}, nil
 }
