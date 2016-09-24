@@ -20,16 +20,11 @@ import (
 var (
 	address string
 	token   string
-	server  *defaultServer
+	srv     *server
 )
 
 type (
-	defaultServer struct {
-		hooks map[string]WebHook
-		hook  WebHook
-	}
-
-	WebHook func(Message) (interface{}, error)
+	WebHook func(Message) (string, error)
 
 	Message struct {
 		Token       string `json:"token"`
@@ -43,13 +38,19 @@ type (
 		Text        string `json:"text"`
 		TriggerWord string `json:"trigger_word"`
 	}
+
+	response map[string]interface{}
+
+	server struct {
+		hooks map[string]WebHook
+		hook  WebHook
+	}
 )
 
 func init() {
 	address, _ = osEnvDefault("BOT_ADDR", "localhost:1234")
 	token, _ = osEnvDefault("BOT_TOKEN", "HA1.54")
-	server = &defaultServer{}
-
+	srv = &server{}
 }
 
 func isValid(m Message) (bool, []error) {
@@ -105,15 +106,15 @@ func create(r io.Reader) (Message, error) {
 }
 
 func Register(h WebHook) {
-	server.hook = h
+	srv.hook = h
 
 }
 
 func Run() error {
-	return http.ListenAndServe(address, server)
+	return http.ListenAndServe(address, srv)
 }
 
-func (s *defaultServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// message is created based on request body
 	m, err := create(r.Body)
 	if err != nil {
@@ -138,7 +139,7 @@ func (s *defaultServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call attached web hook and check if there is an error due message processing
-	re, err := s.hook(m)
+	o, err := s.hook(m)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err.Error())
@@ -147,7 +148,7 @@ func (s *defaultServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send response to the caller
-	if err := json.NewEncoder(w).Encode(re); err != nil {
+	if err := json.NewEncoder(w).Encode(response{"text": o}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
