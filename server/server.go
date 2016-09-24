@@ -96,6 +96,9 @@ func Register(h WebHook) {
 
 func Run() error {
 
+	log.Printf("Running server on %s\n", Address)
+	log.Printf("Listen for slack messages with %s token\n", Token)
+
 	return http.ListenAndServe(Address, srv)
 }
 
@@ -132,9 +135,13 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Received message from user: %s, channel: %s, triggers: %s\n", m.UserName, m.ChannelName, m.TriggerWord)
+	re := response{"text": o}
 	// Send response to the caller
-	if err := json.NewEncoder(w).Encode(response{"text": o}); err != nil {
+	if err := json.NewEncoder(w).Encode(re); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+
+	log.Printf("Response served: %v\n", re["text"])
 
 }
