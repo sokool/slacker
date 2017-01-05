@@ -14,7 +14,7 @@ import (
 
 	"sync"
 
-	"github.com/iris-contrib/errors"
+	"errors"
 	"github.com/sokool/slacker/server"
 )
 
